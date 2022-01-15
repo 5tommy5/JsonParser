@@ -20,17 +20,44 @@ namespace JsonParser
             List<FieldInfo> fields = new List<FieldInfo>();
             var fields2 = this._type.GetFields();
             fields.AddRange(fields2);
-            object result = Activator.CreateInstance(this._type);
+            object result;
+            if (this._type.IsArray)
+            {
+                
+                obj = obj.Replace("[", "");
+                obj = obj.Replace("]", "");
+                var array = obj.Split(',');
+                Type typeOf = this._type.GetElementType();
+                var newresult = Array.CreateInstance(typeOf, array.Length);
+                // Gets method 'Parse' of the object 
+
+                //var re = typeOf.GetMethod("Parse", 
+                //    BindingFlags.Public | BindingFlags.Static,
+                //    Type.DefaultBinder,
+                //    new[] { typeof(string)},
+                //    null);
+                //var e = re.Invoke(null, new object[] { array[0] });
+                for (var i=0; i<array.Length; i++)
+                {
+                    //newresult.SetValue(re.Invoke(null, new object[] { array[i] }), i);
+                    newresult.SetValue(Convert.ChangeType(array[i], typeOf), i);
+                }
+                return newresult;
+
+            }
+            result = Activator.CreateInstance(this._type);
+            Span<char> objSpan = new Span<char>(obj.ToCharArray());
             foreach (var field in fields)
             {
                 bool isPrimitive = field.FieldType.IsPrimitive || field.FieldType == typeof(String) || field.FieldType.IsValueType;
-                bool isString = field.FieldType == typeof(String);
                 
-                var find = getBetween(ref obj, "'" + field.Name + "':", ",", isPrimitive, isString);
+                (var find, var toDelete) = GetBetween(objSpan, field.FieldType, field.Name);
+                obj = obj.Replace(toDelete, "");
+                objSpan = new Span<char>(obj.ToCharArray());
                 if (!isPrimitive)
                 {
                     var newDES = new HiddenParser(field.FieldType);
-                    var convertedValue = newDES.Parse(find+"}");
+                    var convertedValue = newDES.Parse(find);
                     field.SetValue(result, convertedValue);
                 }
                 else
@@ -120,7 +147,7 @@ namespace JsonParser
             
             return result;
         }
-        public string GetBetween(Span<char> obj, Type typeOfParsing, string fieldName)
+        public (string, string) GetBetween(Span<char> obj, Type typeOfParsing, string fieldName)
         {
             string res = "";
             (string strStart, string strEnd ) = GetParamsByType(typeOfParsing);
@@ -128,14 +155,14 @@ namespace JsonParser
             (int? startIndex, int? endIndex) = GetIndexes(obj, strStart, strEnd+",");
             if(startIndex == null)
             {
-                return null;
+                return (null,null);
             }
             if(endIndex == null)
             {
                 (startIndex, endIndex) = GetIndexes(obj, strStart, strEnd+"}");
                 if(endIndex == null)
                 {
-                    return null;
+                    return (null, null);
                 }
                 strEnd += "}";
             }
@@ -143,13 +170,24 @@ namespace JsonParser
             {
                 strEnd += ",";
             }
-
+            string allString = "";
             if(startIndex != null && endIndex != null)
             {
                 var resStart = startIndex.Value + strStart.Length;
-                res = obj.Slice(resStart, endIndex.Value - resStart).ToString();
+                bool isPrimitive = typeOfParsing.IsPrimitive || typeOfParsing == typeof(String) || typeOfParsing.IsValueType;
+                if (!isPrimitive)
+                {
+                    res = obj.Slice(resStart-1, endIndex.Value - resStart+2).ToString();
+                    allString = obj.Slice(startIndex.Value, res.Length - 2 + strEnd.Length + strStart.Length - 1).ToString();
+                }
+                else
+                {
+                    res = obj.Slice(resStart, endIndex.Value - resStart).ToString();
+                    allString = obj.Slice(startIndex.Value, res.Length + strEnd.Length + strStart.Length - 1).ToString();
+                }
+                
             }
-            return res;
+            return (res, allString);
         }
         public (int?,int?) GetIndexes(Span<char> obj, string strStart, string strEnd)
         {
@@ -195,7 +233,7 @@ namespace JsonParser
             {
                 return (":[", "]");
             }
-            if (typeOfParsing.IsPrimitive)
+            if (typeOfParsing.IsPrimitive || typeOfParsing.IsValueType)
             {
                 return (":", "");
             }

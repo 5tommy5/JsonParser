@@ -10,6 +10,7 @@ namespace JsonParserConsole
     {
         public string Var1;
         public int Var2;
+        public int[] Var7;
         public TestClass Var3;
         public Test2Class()
         {

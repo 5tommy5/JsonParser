@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace JsonParser
@@ -24,6 +25,7 @@ namespace JsonParser
             {
                 bool isPrimitive = field.FieldType.IsPrimitive || field.FieldType == typeof(String) || field.FieldType.IsValueType;
                 bool isString = field.FieldType == typeof(String);
+                
                 var find = getBetween(ref obj, "'" + field.Name + "':", ",", isPrimitive, isString);
                 if (!isPrimitive)
                 {
@@ -115,53 +117,8 @@ namespace JsonParser
                     result = result.Replace("'", "");
                 }
             }
-
-            
-            //var toRemove = strSource.Substring(StartIndex, EndIndex + strEnd.Length);
             
             return result;
-            
-
-
-
-
-            //string res = "";
-            //int Start, End;
-            //if (!isPrimitive)
-            //{
-            //    strEnd = "},";
-            //}
-            //if (isString)
-            //{
-            //    strStart += "'";
-            //    strEnd = "',";
-            //}
-            //if (!strSource.Contains(strEnd))
-            //{
-            //    strEnd = "}";
-            //}
-            //if (strSource.Contains(strStart) && strSource.Contains(strEnd))
-            //{
-
-            //    Start = strSource.IndexOf(strStart, 0)-1 + strStart.Length;
-            //    End = strSource.IndexOf(strEnd, Start);
-            //    if (End == -1)
-            //    {
-            //        strEnd = "}";
-            //        End = strSource.IndexOf(strEnd, Start);
-            //    }
-            //    if (!isPrimitive)
-            //    {
-            //        res = strSource.Substring(Start, End - Start+1);
-            //    }
-            //    else
-            //    {
-            //        res = strSource.Substring(Start, End - Start+1);
-            //    }
-                
-            //    strSource = strSource.Remove(Start - strStart.Length, End);
-            //}
-            //return res;
         }
     }
 }

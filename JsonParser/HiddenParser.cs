@@ -23,24 +23,25 @@ namespace JsonParser
             object result;
             if (this._type.IsArray)
             {
-                
                 obj = obj.Replace("[", "");
                 obj = obj.Replace("]", "");
                 var array = obj.Split(',');
                 Type typeOf = this._type.GetElementType();
-                var newresult = Array.CreateInstance(typeOf, array.Length);
-                // Gets method 'Parse' of the object 
 
-                //var re = typeOf.GetMethod("Parse", 
-                //    BindingFlags.Public | BindingFlags.Static,
-                //    Type.DefaultBinder,
-                //    new[] { typeof(string)},
-                //    null);
-                //var e = re.Invoke(null, new object[] { array[0] });
+                var newresult = Array.CreateInstance(typeOf, array.Length);
                 for (var i=0; i<array.Length; i++)
                 {
-                    //newresult.SetValue(re.Invoke(null, new object[] { array[i] }), i);
-                    newresult.SetValue(Convert.ChangeType(array[i], typeOf), i);
+                    if (!typeOf.IsPrimitive && typeOf != typeof(String))
+                    {
+                        var newParserForArray = new HiddenParser(typeOf);
+
+                        var toAdd = newParserForArray.Parse(array[i]);
+                        newresult.SetValue(Convert.ChangeType(toAdd, typeOf), i);
+                    }
+                    else
+                    {
+                        newresult.SetValue(Convert.ChangeType(array[i], typeOf), i);
+                    }
                 }
                 return newresult;
 

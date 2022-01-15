@@ -120,5 +120,90 @@ namespace JsonParser
             
             return result;
         }
+        public string GetBetween(Span<char> obj, Type typeOfParsing, string fieldName)
+        {
+            string res = "";
+            (string strStart, string strEnd ) = GetParamsByType(typeOfParsing);
+            strStart = "'"+fieldName +"'"+ strStart;
+            (int? startIndex, int? endIndex) = GetIndexes(obj, strStart, strEnd+",");
+            if(startIndex == null)
+            {
+                return null;
+            }
+            if(endIndex == null)
+            {
+                (startIndex, endIndex) = GetIndexes(obj, strStart, strEnd+"}");
+                if(endIndex == null)
+                {
+                    return null;
+                }
+                strEnd += "}";
+            }
+            else
+            {
+                strEnd += ",";
+            }
+
+            if(startIndex != null && endIndex != null)
+            {
+                var resStart = startIndex.Value + strStart.Length;
+                res = obj.Slice(resStart, endIndex.Value - resStart).ToString();
+            }
+            return res;
+        }
+        public (int?,int?) GetIndexes(Span<char> obj, string strStart, string strEnd)
+        {
+            int? startIndex = null;
+            int? endIndex = null;
+            for (var index = 0; index < obj.Length; index++)
+            {
+                if (startIndex == null && obj.Slice(index, strStart.Length).ToString() == strStart)
+                {
+                    startIndex = index;
+                    index += strStart.Length - 1;
+                }
+                try
+                {
+                    if(startIndex != null && strEnd == "}}")
+                    {
+                        if(obj.Slice(obj.Length-strEnd.Length, strEnd.Length).ToString() == strEnd)
+                        {
+                            return (startIndex, obj.Length - strEnd.Length);
+                        }
+                    }
+                    if (startIndex != null && obj.Slice(index, strEnd.Length).ToString() == strEnd)
+                    {
+                        endIndex = index;
+                        break;
+                    }
+                }
+                catch
+                {
+                    return (startIndex, null);
+                }
+
+            }
+            return (startIndex, endIndex);
+        }
+        public (string, string) GetParamsByType(Type typeOfParsing)
+        {
+            if(typeOfParsing == typeof(String))
+            {
+                return (":'", "'");
+            }
+            if (typeOfParsing.IsArray)
+            {
+                return (":[", "]");
+            }
+            if (typeOfParsing.IsPrimitive)
+            {
+                return (":", "");
+            }
+            if (!typeOfParsing.IsPrimitive)
+            {
+                return (":{", "}");
+            }
+            return ("","");
+        }
     }
 }
